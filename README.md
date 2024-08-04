@@ -1,8 +1,8 @@
 # Test d'une "mini" mise en production d'un LLM
 
-Le présent repo contient un `docker compose` (`compose.yml`) permettant de créer une API d'un LLM sous `FastAPI`, servi par `Nginx` dans un VPS **Hetzner** et dont les différents endpoints peuvent être retrouvés sur le lien suivant : [https://apptest.ovh/docs](https://apptest.ovh/docs).
+Le présent repo contient un `docker compose` (`compose.yml`) permettant de créer une API REST d'un LLM sous `FastAPI`, servi par `Nginx` dans un VPS **Hetzner** et dont les différents endpoints peuvent être retrouvés sur le lien suivant : [https://apptest.ovh/docs](https://apptest.ovh/docs).
 
-Il est à noter que cette API reprend les mêmes normes que celles utilisées par **OpenAI** grace à [vLLM](https://blog.vllm.ai/2023/06/20/vllm.html). De ce fait, la documentation de **OpenAI** est valide pour requêter ce serveur et vous pouvez retrouver cette documentation [en cliquant sur ce lien](https://platform.openai.com/docs/quickstart).
+Il est à noter que cette API reprend les mêmes normes utilisées par **OpenAI** et cela grace à [vLLM](https://blog.vllm.ai/2023/06/20/vllm.html). La documentation d'**OpenAI** est donc valide pour construire des requêtes compatibles avec ce serveur et que vous pouvez retrouver [en cliquant sur ce lien](https://platform.openai.com/docs/quickstart).
 
 ## Architecture
 
@@ -10,15 +10,15 @@ Il est à noter que cette API reprend les mêmes normes que celles utilisées pa
 
 ## Quelques points techniques
 
-- `vLLM` est plus rapide et efficace pour l'inférence que `transformers` de Hugging Face et contient une intégration d'une API suivant les normes de **OpenAI**.
-- Je prévois l'utilisation d'un VPS sans GPU en me basant uniquement sur les CPUs. Malheureusement `vLLM` ne dispose pas d'une image `Docker` prope à une utilisation CPU, par contre il offre un `Dockerfile` de base permettant la création d'une image compatible avec une compilation complète du code et la possibilité de modifier le serveur `FastAPI` inclus par défaut.
-- J'ai pu créer ma propre image `Docker` compatible CPU [alemaizi/vllm-cpu](https://hub.docker.com/r/alemaizi/vllm-cpu) en suivant les étapes suivantes :
+- `vLLM` est plus rapide et plus efficace pour l'inférence que `transformers` de Hugging Face et il contient une intégration d'une API suivant les normes d'**OpenAI**.
+- Je prévois l'utilisation d'un VPS sans GPU en me basant uniquement sur les CPUs. Malheureusement `vLLM` ne dispose pas d'une image `Docker` prope à une utilisation CPU, par contre il offre un `Dockerfile` permettant la création d'une image compatible ainsi qu'une compilation complète du code et la possibilité de modifier le serveur `FastAPI` propre à `vLLM`.
+- J'ai pu créer ma propre image `Docker` compatible CPU ([alemaizi/vllm-cpu](https://hub.docker.com/r/alemaizi/vllm-cpu)) en réalisant les étapes suivantes :
   - Dans un premier temps il faut cloner le repo de `vLLM` [https://github.com/vllm-project/vllm](https://github.com/vllm-project/vllm).
-  - Avant la construction de l'image, il est possible de modifier l'api `FastAPI` définie dans le fichier `vllm/entrypoints/openai/api_server.py`. Il est intéressant de le faire si on souhaite l'implémentation d'un système d'authentification plus robuste avec des requêtes vers une base de données ou tout autre procédure à inclure.
-  - La construction de l'image se fait via `Dockerfile.cpu` permettant ainsi de disposer d'une image de `vLLM` compatible avec un processing avec des CPUs.
-- Le modèle LLM utilisé est `microsoft/Phi-3-mini-4k-instruct`, c'est un petit modèle avec des performances assez respectables bien suffisant pour réaliser des testes sans nécessité de grandes ressources.
+  - Avant la construction de l'image, il est possible de modifier l'API `FastAPI` définie dans le fichier `vllm/entrypoints/openai/api_server.py`. Il est bien intéressant de le faire, si on souhaite l'implémentation d'un système d'authentification plus robuste avec des requêtes vers une base de données ou tout autre procédure complémentaire.
+  - La construction de l'image se fait via `Dockerfile.cpu` permettant ainsi de disposer d'une image de `vLLM` compatible avec un processing en CPUs.
+- Le modèle LLM utilisé est **Phi 3** de Microsoft (`microsoft/Phi-3-mini-4k-instruct`), c'est un petit modèle avec des performances assez respectables et qui est bien suffisant pour réaliser des testes sans la nécessité de grandes ressources.
 - `nginx/default.conf` contient la configuration du serveur `Nginx` utilisé au niveau du VPS.
-- Une configuration du pare-feu a été faite en utilisant `ufw` visant à limiter le traffic à l'utilisation `ssh`, `http` et `https`.
+- Une configuration du pare-feu a été faite en utilisant `ufw` visant à limiter le traffic aux protocoles `ssh`, `http` et `https`.
 
 ## Docker Compose
 
@@ -54,7 +54,7 @@ services:
 Le `Docker Compose` définit trois services : **fastapi**, **nginx** et **certbot**.
 
 - **fastapi** : ce service permet de lancer `FastAPI` de `vLLM` avec la possibilité de définir le modèle à utiliser via l'argument `--model` ([liste des modèles](https://docs.vllm.ai/en/latest/models/supported_models.html)) ainsi qu'un système d'authentification très basique par le biais de l'argument `--api_key` définissant le token à utiliser.
-- **nginx** : c'est le serveur de notre VPS qui recevra les requêtes via `http\https`.
+- **nginx** : c'est le serveur de notre VPS qui recevra les requêtes via `https`.
 - **certbot** : le service de gestion de l'autorité de cryptage afin de disposer du `https` au niveau du serveur via **Let's Encrypt**.
 
 ## Démo d'utilisation de l'API
@@ -226,10 +226,10 @@ réponse
 
 ## Étapes suivantes
 
-Le serveur créé présente de nombreuses limitations, bien qu'il est entièrement fonctionnel pour recevoir des requêtes, soit pour des tâches de complétion ou de chat avec un assistant, il ne permet une mise à l'échelle ou une intégration de tâches plus poussées.
+Le serveur créé présente de nombreuses limitations, bien qu'il est entièrement fonctionnel pour recevoir des requêtes, soit pour des tâches de complétion ou de chat avec un assistant, il ne permet pas une mise à l'échelle ou une intégration de tâches plus poussées.
 
-Si j'avais à pousser ce projet vers
+Pour transformer ce projet en une solution professionnelle, robuste et adaptée aux exigences d'une entreprise, il faudrait :
 
-- Utilisation d'une infrastructure avec des GPUs ou TPUs.
-- Intégration d'un système d'authentification plus avancé.
-- Utilisation de **[Haystack](https://docs.haystack.deepset.ai/docs/intro)** pour la mise à l'échelle mais surtout la création d'un **RAG** (Retrieval-augmented generation) et des pipelines d'agents. Il est à noter que **Haystack** permet d'intégrer **vLLM** dans ses pipelines.
+- L'utilisation d'une infrastructure avec des GPUs ou TPUs.
+- L'intégration d'un système d'authentification plus avancé.
+- L'utilisation de **[Haystack](https://docs.haystack.deepset.ai/docs/intro)** pour la mise à l'échelle mais surtout la création d'un **RAG** (Retrieval-augmented generation) et des pipelines d'agents. Il est à noter que **Haystack** permet d'intégrer **vLLM** dans ses pipelines.
